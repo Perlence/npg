@@ -6,5 +6,9 @@
   "bin": {
     "npg": "./npg.ts"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "typescript": "^6.0.2"
+  }
 }
