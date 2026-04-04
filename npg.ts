@@ -240,7 +240,7 @@ const ALIASES: Record<string, string> = {
 
 const [command, ...args] = process.argv.slice(2);
 
-if (!command) {
+if (!command || command === "--help" || command === "-h") {
   console.log(`npg – Global npm package manager with lockfile support
 
 Usage: npg <command> [options]
