@@ -39,6 +39,7 @@ const COMMANDS: Record<string, (args: string[]) => void> = {
   install: cmdInstall,
   uninstall: cmdUninstall,
   ls: cmdLs,
+  outdated: cmdOutdated,
   update: cmdUpdate,
 };
 
@@ -53,8 +54,8 @@ Commands:
   install <pkg...>       Install packages globally (aliases: add, i)
   uninstall <pkg...>     Uninstall packages (aliases: remove, rm)
   ls                     List installed packages (alias: list)
+  outdated [pkg...]      Show outdated packages
   update [pkg...]        Update packages (alias: up)
-  update --dry-run       Show outdated packages without updating
 
 Environment:
   NPG_HOME               Package directory (default: ~/.local/npg)
@@ -104,18 +105,15 @@ function cmdLs(): void {
   process.exitCode = npm(["ls", "--depth=0"]);
 }
 
-function cmdUpdate(args: string[]): void {
-  const dryRun = args.includes("--dry-run");
-  const pkgs = args.filter((a) => a !== "--dry-run");
+function cmdOutdated(args: string[]): void {
+  ensureHome();
+  process.exitCode = npm(["outdated", ...args]);
+}
 
+function cmdUpdate(args: string[]): void {
   ensureHome();
 
-  if (dryRun) {
-    process.exitCode = npm(["outdated", ...pkgs]);
-    return;
-  }
-
-  npm(["update", ...pkgs]);
+  npm(["update", ...args]);
 
   // Re-symlink all bins in case versions changed
   const packages = pkgs.length > 0 ? pkgs : installedPackages();

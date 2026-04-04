@@ -23,8 +23,8 @@ Make sure `~/.local/bin` is on your PATH.
 npg install <pkg...>       # Install packages (aliases: add, i)
 npg uninstall <pkg...>     # Uninstall packages (aliases: remove, rm)
 npg ls                     # List installed packages (alias: list)
+npg outdated [pkg...]      # Show outdated packages
 npg update [pkg...]        # Update packages (alias: up)
-npg update --dry-run       # Show outdated packages without updating
 ```
 
 ## Configuration
