@@ -77,7 +77,7 @@ function cmdInstall(args: string[]): void {
 
   if (args.length === 0) {
     // Install from package.json (e.g. after manual edits)
-    npm(["install"]);
+    if (npm(["install"]) !== 0) return;
     for (const name of installedPackages()) {
       linkBins(name);
     }
@@ -87,7 +87,7 @@ function cmdInstall(args: string[]): void {
   const specs = args.map(resolveSpec);
   const names = args.map(pkgDirName);
 
-  npm(["install", ...specs]);
+  if (npm(["install", ...specs]) !== 0) return;
 
   for (const name of names) {
     linkBins(name);
@@ -101,7 +101,7 @@ function cmdUninstall(args: string[]): void {
   // Collect bin names before uninstalling (package.json is gone after)
   const binNames = args.flatMap((name) => [...readBins(name).keys()]);
 
-  npm(["uninstall", ...args]);
+  if (npm(["uninstall", ...args]) !== 0) return;
 
   for (const name of binNames) {
     removeBinSymlink(name);
@@ -121,7 +121,7 @@ function cmdOutdated(args: string[]): void {
 function cmdUpdate(args: string[]): void {
   ensureHome();
 
-  npm(["update", ...args]);
+  if (npm(["update", ...args]) !== 0) return;
 
   // Re-symlink all bins in case versions changed
   const packages = pkgs.length > 0 ? pkgs : installedPackages();
@@ -250,7 +250,9 @@ function npm(args: string[]): number {
     cwd: NPG_HOME,
     stdio: "inherit",
   });
-  return result.status ?? 1;
+  const code = result.status ?? 1;
+  if (code !== 0) process.exitCode = code;
+  return code;
 }
 
 /** Ensure NPG_HOME exists with a package.json. */
