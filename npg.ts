@@ -1,16 +1,26 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
-const NPG_HOME: string = process.env.NPG_HOME ?? join(homedir(), ".local", "npg");
-const NPG_BIN_DIR: string = process.env.NPG_BIN_DIR ?? join(homedir(), ".local", "bin");
+const NPG_HOME: string =
+  process.env.NPG_HOME ?? join(homedir(), ".local", "npg");
+const NPG_BIN_DIR: string =
+  process.env.NPG_BIN_DIR ?? join(homedir(), ".local", "bin");
 
 // ---------------------------------------------------------------------------
 // Main
@@ -133,7 +143,9 @@ function linkBins(pkgName: string): void {
       if (stat.isSymbolicLink()) {
         unlinkSync(target);
       } else {
-        console.warn(`npg: ${target} already exists and is not a symlink, skipping`);
+        console.warn(
+          `npg: ${target} already exists and is not a symlink, skipping`,
+        );
         continue;
       }
     } catch {
@@ -171,7 +183,7 @@ function readBins(pkgName: string): Map<string, string> {
   if (typeof pkg.bin === "string") {
     // Single binary – name is the package name (without scope)
     const name = pkgName.startsWith("@") ? pkgName.split("/")[1] : pkgName;
-    bins.set(name!, pkg.bin);
+    bins.set(name, pkg.bin);
   } else {
     for (const [name, path] of Object.entries(pkg.bin)) {
       bins.set(name, path as string);
@@ -244,8 +256,13 @@ function ensureHome(): void {
   if (!existsSync(pkgPath)) {
     writeFileSync(
       pkgPath,
+      // biome-ignore lint/style/useTemplate: wtf
       JSON.stringify(
-        { name: "npm-global", private: true, description: "Global packages managed by npg" },
+        {
+          name: "npm-global",
+          private: true,
+          description: "Global packages managed by npg",
+        },
         null,
         2,
       ) + "\n",
