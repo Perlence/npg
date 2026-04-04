@@ -48,7 +48,11 @@ Completions include all commands and aliases. `uninstall`, `update`, and `outdat
 
 ## How it works
 
-npg is a thin wrapper around npm. It runs `npm install`, `npm uninstall`, etc. inside a dedicated project directory (`NPG_HOME`). After installing a package, it reads the package's `bin` field and creates symlinks in `NPG_BIN_DIR` pointing to `NPG_HOME/node_modules/.bin/<name>`.
+npg is a thin wrapper around npm. It runs `npm install`, `npm uninstall`, etc. inside a dedicated project directory (`NPG_HOME`). After each operation, it syncs symlinks in `NPG_BIN_DIR`:
+
+1. Removes dangling symlinks whose targets no longer exist
+2. Creates missing symlinks for bins declared by installed packages
+3. Skips symlinks that are already correct
 
 Only binaries from explicitly installed packages are symlinked – transitive dependencies are not exposed.
 

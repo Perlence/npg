@@ -5,7 +5,9 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  readlinkSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
@@ -78,37 +80,19 @@ handler(args);
 function cmdInstall(args: string[]): void {
   ensureHome();
 
-  if (args.length === 0) {
-    // Install from package.json (e.g. after manual edits)
-    if (npm(["install"]) !== 0) return;
-    for (const name of installedPackages()) {
-      linkBins(name);
-    }
-    return;
-  }
+  const resolved = args.map(resolveSpec);
+  if (npm(["install", ...resolved]) !== 0) return;
 
-  const specs = args.map(resolveSpec);
-  const names = args.map(pkgDirName);
-
-  if (npm(["install", ...specs]) !== 0) return;
-
-  for (const name of names) {
-    linkBins(name);
-  }
+  syncBins();
 }
 
 function cmdUninstall(args: string[]): void {
   if (args.length === 0) die("usage: npg uninstall <pkg...>");
   ensureHome();
 
-  // Collect bin names before uninstalling (package.json is gone after)
-  const binNames = args.flatMap((name) => [...readBins(name).keys()]);
-
   if (npm(["uninstall", ...args]) !== 0) return;
 
-  for (const name of binNames) {
-    removeBinSymlink(name);
-  }
+  syncBins();
 }
 
 function cmdLs(): void {
@@ -136,58 +120,81 @@ function cmdUpdate(args: string[]): void {
 
   if (npm(["update", ...args]) !== 0) return;
 
-  // Re-symlink all bins in case versions changed
-  const packages = args.length > 0 ? args : installedPackages();
-  for (const name of packages) {
-    linkBins(name);
-  }
+  syncBins();
 }
 
 // ---------------------------------------------------------------------------
 // Bin symlink management
 // ---------------------------------------------------------------------------
 
-/** Create symlinks in NPG_BIN_DIR for a package's bins. */
-function linkBins(pkgName: string): void {
-  const bins = readBins(pkgName);
-  if (bins.size === 0) return;
+/**
+ * Remove dangling symlinks in NPG_BIN_DIR, then create missing symlinks for all
+ * installed packages.
+ */
+function syncBins(): void {
+  for (const name of removeDanglingSymlinks()) {
+    console.log(`  removed ${name}`);
+  }
+  for (const name of linkMissingBins()) {
+    console.log(`  added ${name}`);
+  }
+}
 
-  ensureBinDir();
-  for (const [name] of bins) {
-    const source = join(NPG_HOME, "node_modules", ".bin", name);
-    const target = join(NPG_BIN_DIR, name);
-
+/**
+ * Remove symlinks in NPG_BIN_DIR that point into NPG_HOME but whose target no
+ * longer exists.
+ */
+function removeDanglingSymlinks(): string[] {
+  const removed: string[] = [];
+  if (!existsSync(NPG_BIN_DIR)) return removed;
+  const prefix = join(NPG_HOME, "/");
+  for (const entry of readdirSync(NPG_BIN_DIR)) {
+    const path = join(NPG_BIN_DIR, entry);
     try {
-      const stat = lstatSync(target);
-      if (stat.isSymbolicLink()) {
-        unlinkSync(target);
-      } else {
-        console.warn(
-          `npg: ${target} already exists and is not a symlink, skipping`,
-        );
-        continue;
+      const stat = lstatSync(path);
+      if (!stat.isSymbolicLink()) continue;
+      const link = readlinkSync(path);
+      if (link.startsWith(prefix) && !existsSync(path)) {
+        unlinkSync(path);
+        removed.push(entry);
       }
     } catch (err) {
       if (!isEnoent(err)) throw err;
     }
-
-    symlinkSync(source, target);
-    console.log(`  ${name} → ${source}`);
   }
+  return removed;
 }
 
-/** Remove a single bin symlink from NPG_BIN_DIR. */
-function removeBinSymlink(name: string): void {
-  const target = join(NPG_BIN_DIR, name);
-  try {
-    const stat = lstatSync(target);
-    if (stat.isSymbolicLink()) {
-      unlinkSync(target);
-      console.log(`  removed ${name}`);
+/** Create missing symlinks in NPG_BIN_DIR for all installed packages. */
+function linkMissingBins(): string[] {
+  const added: string[] = [];
+  ensureBinDir();
+  for (const pkgName of installedPackages()) {
+    const bins = readBins(pkgName);
+    for (const [name] of bins) {
+      const source = join(NPG_HOME, "node_modules", ".bin", name);
+      const target = join(NPG_BIN_DIR, name);
+
+      try {
+        const stat = lstatSync(target);
+        if (stat.isSymbolicLink()) {
+          if (readlinkSync(target) === source) continue;
+          unlinkSync(target);
+        } else {
+          console.warn(
+            `npg: ${target} already exists and is not a symlink, skipping`,
+          );
+          continue;
+        }
+      } catch (err) {
+        if (!isEnoent(err)) throw err;
+      }
+
+      symlinkSync(source, target);
+      added.push(name);
     }
-  } catch (err) {
-    if (!isEnoent(err)) throw err;
   }
+  return added;
 }
 
 /** Read the `bin` field from an installed package's package.json. */
@@ -214,36 +221,6 @@ function readBins(pkgName: string): Map<string, string> {
 // ---------------------------------------------------------------------------
 // Package spec helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Resolve a package spec (e.g. "typescript", "@scope/pkg", "@scope/pkg@5",
- * ".", "../foo") to the directory name it will occupy in node_modules.
- */
-function pkgDirName(spec: string): string {
-  // Local path – read the package.json from that directory
-  if (spec.startsWith(".") || spec.startsWith("/")) {
-    const dir = resolve(spec);
-    const pkgFile = join(dir, "package.json");
-    if (!existsSync(pkgFile)) die(`No package.json found in ${dir}`);
-    const pkg = JSON.parse(readFileSync(pkgFile, "utf-8"));
-    if (!pkg.name) die(`package.json in ${dir} has no name field`);
-    return pkg.name;
-  }
-  // Strip version/tag: "@scope/pkg@1.2.3" → "@scope/pkg", "pkg@latest" → "pkg"
-  if (spec.startsWith("@")) {
-    // Scoped: first @ is scope, optional second @ is version
-    const rest = spec.slice(1);
-    const slashIdx = rest.indexOf("/");
-    if (slashIdx === -1) return spec; // bare "@scope" – unlikely but pass through
-    const afterSlash = rest.slice(slashIdx + 1);
-    const atIdx = afterSlash.indexOf("@");
-    if (atIdx === -1) return spec;
-    return spec.slice(0, slashIdx + 2 + atIdx); // "@" + rest up to second "@"
-  }
-  const atIdx = spec.indexOf("@");
-  if (atIdx === -1) return spec;
-  return spec.slice(0, atIdx);
-}
 
 /** Resolve a spec to an absolute path if it's a local path, otherwise return as-is. */
 function resolveSpec(spec: string): string {
