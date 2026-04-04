@@ -154,8 +154,8 @@ function linkBins(pkgName: string): void {
         );
         continue;
       }
-    } catch {
-      // Doesn't exist, good
+    } catch (err) {
+      if (!isEnoent(err)) throw err;
     }
 
     symlinkSync(source, target);
@@ -172,8 +172,8 @@ function removeBinSymlink(name: string): void {
       unlinkSync(target);
       console.log(`  removed ${name}`);
     }
-  } catch {
-    // Doesn't exist, fine
+  } catch (err) {
+    if (!isEnoent(err)) throw err;
   }
 }
 
@@ -288,6 +288,12 @@ function ensureBinDir(): void {
 function die(message: string): never {
   console.error(`npg: ${message}`);
   process.exit(1);
+}
+
+function isEnoent(err: unknown): boolean {
+  return (
+    err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT"
+  );
 }
 
 /**
