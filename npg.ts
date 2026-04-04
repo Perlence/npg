@@ -51,7 +51,7 @@ if (!command || command === "--help" || command === "-h") {
 Usage: npg <command> [options]
 
 Commands:
-  install <pkg...>       Install packages globally (aliases: add, i)
+  install [pkg...]       Install packages globally (aliases: add, i)
   uninstall <pkg...>     Uninstall packages (aliases: remove, rm)
   ls                     List installed packages (alias: list)
   outdated [pkg...]      Show outdated packages
@@ -73,11 +73,19 @@ handler(args);
 // ---------------------------------------------------------------------------
 
 function cmdInstall(args: string[]): void {
-  if (args.length === 0) die("usage: npg install <pkg...>");
   ensureHome();
 
-  const names = args.map(pkgDirName);
+  if (args.length === 0) {
+    // Install from package.json (e.g. after manual edits)
+    npm(["install"]);
+    for (const name of installedPackages()) {
+      linkBins(name);
+    }
+    return;
+  }
+
   const specs = args.map(resolveSpec);
+  const names = args.map(pkgDirName);
 
   npm(["install", ...specs]);
 

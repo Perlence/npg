@@ -20,12 +20,14 @@ Make sure `~/.local/bin` is on your PATH.
 ## Usage
 
 ```bash
-npg install <pkg...>       # Install packages (aliases: add, i)
+npg install [pkg...]       # Install packages (aliases: add, i)
 npg uninstall <pkg...>     # Uninstall packages (aliases: remove, rm)
 npg ls                     # List installed packages (alias: list)
 npg outdated [pkg...]      # Show outdated packages
 npg update [pkg...]        # Update packages (alias: up)
 ```
+
+`npg install` without arguments installs from `package.json`, useful after manual edits. All npm flags are passed through, e.g. `npg install --dry-run cowsay`.
 
 ## Configuration
 
