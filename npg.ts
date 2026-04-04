@@ -137,7 +137,7 @@ function cmdUpdate(args: string[]): void {
   if (npm(["update", ...args]) !== 0) return;
 
   // Re-symlink all bins in case versions changed
-  const packages = pkgs.length > 0 ? pkgs : installedPackages();
+  const packages = args.length > 0 ? args : installedPackages();
   for (const name of packages) {
     linkBins(name);
   }
