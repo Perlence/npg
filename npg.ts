@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
@@ -21,12 +21,13 @@ function die(message: string): never {
   process.exit(1);
 }
 
-/** Run a command inside NPG_HOME, inheriting stdio. */
-function npm(args: string[]): void {
-  execSync(["npm", ...args].join(" "), {
+/** Run a command inside NPG_HOME, inheriting stdio. Returns the exit code. */
+function npm(args: string[]): number {
+  const result = spawnSync("npm", args, {
     cwd: NPG_HOME,
     stdio: "inherit",
   });
+  return result.status ?? 1;
 }
 
 /** Ensure NPG_HOME exists with a package.json. */
@@ -202,7 +203,7 @@ function cmdUninstall(args: string[]): void {
 
 function cmdLs(): void {
   ensureHome();
-  npm(["ls", "--depth=0"]);
+  process.exitCode = npm(["ls", "--depth=0"]);
 }
 
 function cmdUpdate(args: string[]): void {
@@ -212,7 +213,7 @@ function cmdUpdate(args: string[]): void {
   ensureHome();
 
   if (dryRun) {
-    npm(["outdated", ...pkgs]);
+    process.exitCode = npm(["outdated", ...pkgs]);
     return;
   }
 
