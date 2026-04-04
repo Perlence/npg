@@ -1,0 +1,10 @@
+{
+  "name": "npg",
+  "version": "0.1.0",
+  "description": "Global npm package manager with lockfile support",
+  "type": "module",
+  "bin": {
+    "npg": "./npg.ts"
+  },
+  "license": "MIT"
+}
