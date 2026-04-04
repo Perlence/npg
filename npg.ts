@@ -11,7 +11,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -41,6 +42,7 @@ const COMMANDS: Record<string, (args: string[]) => void> = {
   ls: cmdLs,
   outdated: cmdOutdated,
   update: cmdUpdate,
+  completion: cmdCompletion,
 };
 
 const [command, ...args] = process.argv.slice(2);
@@ -56,6 +58,7 @@ Commands:
   ls                     List installed packages (alias: list)
   outdated [pkg...]      Show outdated packages
   update [pkg...]        Update packages (alias: up)
+  completion <shell>     Output shell completions (fish)
 
 Environment:
   NPG_HOME               Package directory (default: ~/.local/npg)
@@ -116,6 +119,16 @@ function cmdLs(): void {
 function cmdOutdated(args: string[]): void {
   ensureHome();
   process.exitCode = npm(["outdated", ...args]);
+}
+
+function cmdCompletion(args: string[]): void {
+  const shell = args[0];
+  if (shell !== "fish") {
+    die("usage: npg completion fish");
+  }
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const script = readFileSync(join(dir, "completions.fish"), "utf-8");
+  process.stdout.write(script);
 }
 
 function cmdUpdate(args: string[]): void {

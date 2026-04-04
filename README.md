@@ -25,9 +25,19 @@ npg uninstall <pkg...>     # Uninstall packages (aliases: remove, rm)
 npg ls                     # List installed packages (alias: list)
 npg outdated [pkg...]      # Show outdated packages
 npg update [pkg...]        # Update packages (alias: up)
+npg completion fish        # Output fish shell completions
 ```
 
 `npg install` without arguments installs from `package.json`, useful after manual edits. All npm flags are passed through, e.g. `npg install --dry-run cowsay`.
+
+## Shell completions
+
+```fish
+npg completion fish | source                              # activate for current session
+npg completion fish > ~/.config/fish/completions/npg.fish # persist
+```
+
+Completions include all commands and aliases. `uninstall`, `update`, and `outdated` complete with installed package names.
 
 ## Configuration
 
