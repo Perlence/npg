@@ -193,12 +193,24 @@ function cmdUninstall(args: string[]): void {
   if (args.length === 0) die("usage: npg uninstall <pkg...>");
   ensureHome();
 
-  // Read bins before uninstalling so we know what to remove
-  for (const name of args) {
-    unlinkBins(name);
-  }
+  // Collect bin names before uninstalling (package.json is gone after)
+  const binNames = args.flatMap((name) => [...readBins(name).keys()]);
 
   npm(["uninstall", ...args]);
+
+  // Remove symlinks after npm output
+  for (const name of binNames) {
+    const target = join(NPG_BIN_DIR, name);
+    try {
+      const stat = lstatSync(target);
+      if (stat.isSymbolicLink()) {
+        unlinkSync(target);
+        console.log(`  removed ${name}`);
+      }
+    } catch {
+      // doesn't exist, fine
+    }
+  }
 }
 
 function cmdLs(): void {
