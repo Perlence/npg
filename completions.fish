@@ -30,3 +30,6 @@ function __npg_installed_packages
 end
 
 complete -c npg -n "__fish_seen_subcommand_from uninstall remove rm update up outdated" -a "(__npg_installed_packages)" -f
+
+# Allow path completion for local package specs on install/add/i
+complete -c npg -n "__fish_seen_subcommand_from install add i" -F
