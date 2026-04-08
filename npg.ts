@@ -224,7 +224,7 @@ function readBins(pkgName: string): Map<string, string> {
 
 /** Resolve a spec to an absolute path if it's a local path, otherwise return as-is. */
 function resolveSpec(spec: string): string {
-  if (spec.startsWith(".") || spec.startsWith("/")) {
+  if (spec.startsWith(".") || spec.startsWith("/") || spec.endsWith("/")) {
     return resolve(spec);
   }
   return spec;
