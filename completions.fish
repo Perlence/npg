@@ -17,6 +17,31 @@ complete -c npg -n __fish_use_subcommand -a update -d "Update packages"
 complete -c npg -n __fish_use_subcommand -a up -d "Update packages"
 complete -c npg -n __fish_use_subcommand -a completion -d "Output fish completions"
 
+# Inherit npm flag completions per subcommand
+function __npg_npm_completions
+  set -l cmd (commandline -opc)
+  set -l npm_sub
+  switch $cmd[2]
+    case install add i
+      set npm_sub install
+    case uninstall remove rm
+      set npm_sub uninstall
+    case ls list
+      set npm_sub ls
+    case outdated
+      set npm_sub outdated
+    case update up
+      set npm_sub update
+    case '*'
+      return
+  end
+  set -l args $cmd[3..-1]
+  complete -C "npm $npm_sub "(string join ' ' -- $args (commandline -ct))
+end
+
+complete -c npg -n "not __fish_use_subcommand" -x # no-op guard
+complete -c npg -n "__fish_seen_subcommand_from install add i uninstall remove rm ls list outdated update up" -a "(__npg_npm_completions)"
+
 # Suggest installed packages for uninstall/remove/rm/update/up/outdated
 function __npg_installed_packages
   set -l npg_home (set -q NPG_HOME; and echo $NPG_HOME; or echo ~/.local/npg)
